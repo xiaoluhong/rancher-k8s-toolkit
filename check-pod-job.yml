@@ -1,0 +1,46 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: check-pod-job
+  namespace: cattle-system
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 3
+      completions: 3
+      parallelism: 1
+      template:
+        spec:
+          containers:
+          - args:
+            - bash
+            - check-pod-state.sh
+            image: registry.cn-shenzhen.aliyuncs.com/rancher/rancher-k8s-toolkit
+            imagePullPolicy: Always
+            name: check-pod-job
+            resources: {}
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: {}
+              privileged: false
+              readOnlyRootFilesystem: false
+              runAsNonRoot: false
+            stdin: true
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            tty: true
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccount: rancher
+          serviceAccountName: rancher
+          terminationGracePeriodSeconds: 30
+  schedule: 0/10 * * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+status: {}

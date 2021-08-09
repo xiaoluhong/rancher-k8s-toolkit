@@ -1,5 +1,8 @@
 FROM    alpine:3.10
 
+COPY check-pod-state.sh /usr/local/bin
+COPY force-del-container.sh /usr/local/bin
+
 RUN     set -ex \
     &&  echo "http://mirrors.aliyun.com/alpine/edge/community" >> /etc/apk/repositories \
     &&  echo "http://mirrors.aliyun.com/alpine/edge/main" >> /etc/apk/repositories \
@@ -76,7 +79,7 @@ RUN 	cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
 	&&  echo "Asia/shanghai" >> /etc/timezone
 
 # apparmor issue #14140
-RUN     mv /usr/sbin/tcpdump /usr/bin/tcpdump
+#RUN     mv /usr/sbin/tcpdump /usr/bin/tcpdump
 
 # Installing ctop - top-like container monitor
 ARG     CTOP_VERSION=0.7.5
