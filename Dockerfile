@@ -137,6 +137,15 @@ RUN     go get -u github.com/google/pprof \
     &&  chmod +x /usr/local/bin/etcdctl \
     &&  rm -rf /tmp/*
 
+# install docker by binaries
+ARG DOCKER_VERSION=19.03.9
+RUN     cd /tmp \
+    &&  curl -LSs https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -O \
+    &&  tar xzvf docker-${DOCKER_VERSION}.tgz \
+    &&  cp docker/docker /usr/bin/docker \
+    &&  chmod +x /usr/bin/docker \
+    &&  rm -rf docker-${DOCKER_VERSION}.tgz docker/
+
 # Settings
 ADD     motd /etc/motd
 ADD     profile /etc/profile
