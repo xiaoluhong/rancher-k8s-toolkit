@@ -1,4 +1,4 @@
-FROM    alpine:3.10
+FROM    alpine:3.14
 
 COPY check-pod-state.sh /usr/local/bin
 COPY force-del-container.sh /usr/local/bin
@@ -46,8 +46,6 @@ RUN     set -ex \
         nmap \
         nmap-nping \
         openssl \
-        py-crypto \
-        py2-virtualenv \
         python2 \
         scapy \
         socat \
@@ -71,6 +69,10 @@ RUN     set -ex \
         atop \
         glances \
         websocat \
+        dcron \
+        rsyslog \
+        ca-certificates \
+        rsync \
     &&  rm -rf /tmp/* \
     &&  rm -rf /var/cache/apk/*
 

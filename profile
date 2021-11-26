@@ -4,12 +4,9 @@ export CLICOLOR=1
 export LSCOLORS=GxFxCxDxBxegedabagaced
 export LS_OPTIONS='--color=auto'
 
-
 # aliases
 alias ls='ls $LS_OPTIONS'
 alias 'll=ls -lAFhtiG'
-
-
 
 function prompt {
  local BLACK="\[\033[0;30m\]"
