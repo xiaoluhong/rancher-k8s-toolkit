@@ -1,0 +1,185 @@
+apiVersion: v1
+data:
+  cronjob-docker-prune.sh: |-
+    #!/bin/bash
+
+    echo "$(date "+%Y-%m-%d_%H:%M:%S_%Z"): Check Disk Usage."
+
+    MAX_DISK_USAGE=${1:-75}
+
+    MAIL_ALERTS=${MAIL_ALERTS:-false}
+    # 收件箱
+    MAIL_TO=${MAIL_TO}
+    # 发件箱
+    MAIL_FROM=${MAIL_FROM}
+    MAIL_PASSWORD=${MAIL_PASSWORD}
+    # smtp 服务器配置
+    MAIL_SMTP_SERVER=${MAIL_SMTP_SERVER}
+    MAIL_SMTP_PORT=${MAIL_SMTP_PORT:-465}
+
+    MAIL_CACERT=${MAIL_CACERT}
+    MAIL_TLS_CHECK=${MAIL_TLS_CHECK:-true}
+
+    send_mail ()
+    {
+    cat << EOF > mail.txt
+    From: ${MAIL_FROM}
+    To: ${MAIL_TO}
+    Subject: "Mail Alerts: High Disk Usage - $( hostname )"
+    Date: $( date -Iseconds )
+    Hostname: $( hostname )
+
+    Host_IP:
+    $( ifconfig | grep inet | grep -v -E '127|inet6|10.42' )
+
+    Disk_Usage:
+    $( df -h | sort -u )
+    EOF
+
+        if [[ ${MAIL_TLS_CHECK} && ${MAIL_TLS_CHECK} == 'true' ]]; then
+            curl --silent --ssl --url "smtps://${MAIL_SMTP_SERVER}:${MAIL_SMTP_PORT}" \
+            --mail-from "${MAIL_FROM}" --mail-rcpt "${MAIL_TO}" \
+            --user "${MAIL_FROM}:${MAIL_PASSWORD}" \
+            --upload-file mail.txt
+
+            return
+        fi
+
+        if [[ ${MAIL_CACERT} && -n ${MAIL_CACERT} && ${MAIL_TLS_CHECK} == 'true' ]]; then
+            touch /root/cacert.pem
+            echo ${MAIL_CACERT} > /root/cacert.pem
+            curl --silent --ssl --url "smtps://${MAIL_SMTP_SERVER}:${MAIL_SMTP_PORT}" \
+            --mail-from "${MAIL_FROM}" --mail-rcpt "${MAIL_TO}" \
+            --cacert=/root/cacert.pem \
+            --user "${MAIL_FROM}:${MAIL_PASSWORD}" \
+            --upload-file mail.txt
+
+            return
+        fi
+
+        if [[ ${MAIL_TLS_CHECK} && ${MAIL_TLS_CHECK} == 'false' ]]; then
+            curl --silent --url "smtps://${MAIL_SMTP_SERVER}:${MAIL_SMTP_PORT}" \
+            --mail-from "${MAIL_FROM}" --mail-rcpt "${MAIL_TO}" \
+            --user "${MAIL_FROM}:${MAIL_PASSWORD}" \
+            --insecure \
+            --upload-file mail.txt
+
+            return
+        fi
+    }
+
+    CURRENT_DISK_USAGE=$( df -h | grep '/dev' | awk '{print $5}' | grep -v 'Use%' | tr -d '%' | sort -nr | head -n 1 );
+
+    if [[ "${CURRENT_DISK_USAGE}" > "${MAX_DISK_USAGE}" ]]; then
+        echo "Current disk usage more than ${MAX_DISK_USAGE},  run docker system prune -a -f"
+        docker system prune -a -f;
+
+        CHECK_DISK_USAGE=$( df -h | grep '/dev' | awk '{print $5}' | grep -v 'Use%' | tr -d '%' | sort -nr | head -n 1 );
+
+        if [[ "${CHECK_DISK_USAGE}" > "${MAX_DISK_USAGE}" ]]; then
+            if [[ ${MAIL_ALERTS} = 'true' && ${MAIL_FROM} != '' && ${MAIL_TO} != '' ]]; then
+                echo 'Current DISK USAGE: '"'${CURRENT_DISK_USAGE}'"', Send ALERTS MAIL.'
+                send_mail
+            else
+                echo 'Current DISK USAGE: '"'${CURRENT_DISK_USAGE}'"', because ${MAIL_ALERTS}=false, or ${MAIL_FROM}="" or ${MAIL_TO}="", So not Send ALERTS MAIL.'
+            fi
+        fi
+    fi
+  run.sh: |-
+    #!/bin/bash
+
+    echo '*    */1       *       *       *   /cronjob-docker-prune.sh > /proc/1/fd/1 ' > /etc/crontabs/root
+
+    crond -f
+kind: ConfigMap
+metadata:
+  annotations:
+  labels:
+    cattle.io/creator: norman
+  name: cronjob-docker-prune
+  namespace: cattle-system
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+  generation: 3
+  labels:
+    cattle.io/creator: norman
+    workload.user.cattle.io/workloadselector: daemonSet-cattle-system-cronjob-docker-prune
+  name: cronjob-docker-prune
+  namespace: cattle-system
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      workload.user.cattle.io/workloadselector: daemonSet-cattle-system-cronjob-docker-prune
+  template:
+    metadata:
+      annotations:
+      labels:
+        workload.user.cattle.io/workloadselector: daemonSet-cattle-system-cronjob-docker-prune
+    spec:
+      containers:
+      - args:
+        - /run.sh
+        env:
+        image: registry.cn-hangzhou.aliyuncs.com/rancher/tools
+        imagePullPolicy: IfNotPresent
+        name: cronjob-docker-prune
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {}
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: false
+        stdin: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        tty: true
+        volumeMounts:
+        - mountPath: /var/run/docker.sock
+          name: docker-sock
+        - mountPath: /cronjob-docker-prune.sh
+          name: cronjob-docker-prune
+          subPath: cronjob-docker-prune.sh
+        - mountPath: /run.sh
+          name: cronjob-docker-prune
+          subPath: run.sh
+      dnsConfig: {}
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /var/run/docker.sock
+          type: ""
+        name: docker-sock
+      - configMap:
+          defaultMode: 511
+          items:
+          - key: cronjob-docker-prune.sh
+            mode: 511
+            path: cronjob-docker-prune.sh
+          - key: run.sh
+            mode: 511
+            path: run.sh
+          name: cronjob-docker-prune
+          optional: false
+        name: cronjob-docker-prune
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+

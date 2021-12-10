@@ -1,8 +1,5 @@
 FROM    alpine:3.14
 
-COPY check-pod-state.sh /usr/local/bin
-COPY force-del-container.sh /usr/local/bin
-
 RUN     set -ex \
     &&  echo "http://mirrors.aliyun.com/alpine/edge/community" >> /etc/apk/repositories \
     &&  echo "http://mirrors.aliyun.com/alpine/edge/main" >> /etc/apk/repositories \
@@ -73,6 +70,7 @@ RUN     set -ex \
         rsyslog \
         ca-certificates \
         rsync \
+        openntpd \
     &&  rm -rf /tmp/* \
     &&  rm -rf /var/cache/apk/*
 
@@ -152,5 +150,7 @@ RUN     cd /tmp \
 ADD     motd /etc/motd
 ADD     profile /etc/profile
 ENV     GOPATH=/root/go GOBIN='' PATH=$PATH:$GOROOT/bin:/root/go/bin
+
+COPY bin/* /usr/local/bin/
 
 CMD     ["/bin/bash","-l"]
