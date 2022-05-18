@@ -82,19 +82,19 @@ RUN 	cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
 #RUN     mv /usr/sbin/tcpdump /usr/bin/tcpdump
 
 # Installing ctop - top-like container monitor
-ARG     CTOP_VERSION=0.7.5
+ARG     CTOP_VERSION=0.7.7
 RUN 	curl -LSs https://github.com/bcicen/ctop/releases/download/v${CTOP_VERSION}/ctop-${CTOP_VERSION}-linux-amd64 -o /usr/local/bin/ctop \
 	&& 	chmod +x /usr/local/bin/ctop \
     &&  rm -rf /tmp/*
 
 # Installing calicoctl
-ARG     CALICOCTL_VERSION=v3.17.0
+ARG     CALICOCTL_VERSION=v3.21.5
 RUN 	curl -LSs https://github.com/projectcalico/calicoctl/releases/download/${CALICOCTL_VERSION}/calicoctl -o /usr/local/bin/calicoctl \
 	&& 	chmod +x /usr/local/bin/calicoctl \
     &&  rm -rf /tmp/*
 
 # Installing docker-debug
-ARG     DOCKER_DEBUG_VERSION=0.7.3
+ARG     DOCKER_DEBUG_VERSION=0.7.4
 RUN 	curl -LSs https://github.com/zeromake/docker-debug/releases/download/${DOCKER_DEBUG_VERSION}/docker-debug-linux-amd64 -o /usr/local/bin/docker-debug \
 	&& 	chmod +x /usr/local/bin/docker-debug \
     &&  rm -rf /tmp/*
@@ -113,21 +113,20 @@ RUN     curl -LSs -o /usr/local/bin/kubectl https://storage.googleapis.com/kuber
     &&  chmod +x /usr/local/bin/kubectl
 
 # Installing termshark
-ARG     TERMSHARK_VERSION=2.1.1
+ARG     TERMSHARK_VERSION=2.3.0
 RUN     curl -LSs https://github.com/gcla/termshark/releases/download/v${TERMSHARK_VERSION}/termshark_${TERMSHARK_VERSION}_linux_x64.tar.gz -o /tmp/termshark_${TERMSHARK_VERSION}_linux_x64.tar.gz \
     &&  tar -zxvf /tmp/termshark_${TERMSHARK_VERSION}_linux_x64.tar.gz \
     &&  mv termshark_${TERMSHARK_VERSION}_linux_x64/termshark /usr/local/bin/termshark \
     &&  chmod +x /usr/local/bin/termshark
 
 # Installing etcdctl
-ARG     ETCD_VER=v3.4.14
+ARG     ETCD_VER=v3.5.4
 ## choose either URL
 ARG     GOOGLE_URL=https://storage.googleapis.com/etcd
 ARG     GITHUB_URL=https://github.com/etcd-io/etcd/releases/download
 ARG     DOWNLOAD_URL=${GOOGLE_URL}
 
-RUN     go get -u github.com/google/pprof \
-    &&  rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz \
+RUN     rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz \
     &&  rm -rf /tmp/etcd-download-test \
     &&  mkdir -p /tmp/etcd-download-test \
     &&  curl -LSs ${DOWNLOAD_URL}/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz \
